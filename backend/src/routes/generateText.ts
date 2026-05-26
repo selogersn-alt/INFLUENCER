@@ -1,3 +1,5 @@
+import { Router, Request, Response } from 'express';
+import { GoogleGenAI } from '@google/genai';
 import prisma from '../prisma';
 
 const router = Router();
