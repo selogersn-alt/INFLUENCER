@@ -34,36 +34,97 @@ router.get('/state', async (req: Request, res: Response) => {
         connected: user.tiktokConnected,
         username: user.tiktokUsername,
       },
+      credentials: {
+        geminiApiKeyConfigured: !!user.geminiApiKey,
+        replicateTokenConfigured: !!user.replicateToken,
+        facebookClientIdConfigured: !!user.facebookClientId,
+        facebookClientSecretConfigured: !!user.facebookClientSecret,
+        tiktokClientIdConfigured: !!user.tiktokClientId,
+        tiktokClientSecretConfigured: !!user.tiktokClientSecret,
+        
+        geminiApiKey: user.geminiApiKey ? `••••••••${user.geminiApiKey.slice(-4)}` : '',
+        replicateToken: user.replicateToken ? `••••••••${user.replicateToken.slice(-4)}` : '',
+        facebookClientId: user.facebookClientId ? `••••••••${user.facebookClientId.slice(-4)}` : '',
+        facebookClientSecret: user.facebookClientSecret ? '••••••••' : '',
+        tiktokClientId: user.tiktokClientId ? `••••••••${user.tiktokClientId.slice(-4)}` : '',
+        tiktokClientSecret: user.tiktokClientSecret ? '••••••••' : '',
+      }
     });
   } catch (err) {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+// --- POST /api/settings/credentials ---
+router.post('/credentials', async (req: Request, res: Response) => {
+  const {
+    geminiApiKey,
+    replicateToken,
+    facebookClientId,
+    facebookClientSecret,
+    tiktokClientId,
+    tiktokClientSecret
+  } = req.body;
+
+  try {
+    const updateData: Record<string, string | null> = {};
+    if (geminiApiKey !== undefined) updateData.geminiApiKey = geminiApiKey || null;
+    if (replicateToken !== undefined) updateData.replicateToken = replicateToken || null;
+    if (facebookClientId !== undefined) updateData.facebookClientId = facebookClientId || null;
+    if (facebookClientSecret !== undefined) updateData.facebookClientSecret = facebookClientSecret || null;
+    if (tiktokClientId !== undefined) updateData.tiktokClientId = tiktokClientId || null;
+    if (tiktokClientSecret !== undefined) updateData.tiktokClientSecret = tiktokClientSecret || null;
+
+    await prisma.user.update({
+      where: { id: DEFAULT_USER_ID },
+      data: updateData,
+    });
+
+    res.json({ success: true, message: 'Identifiants mis à jour avec succès.' });
+  } catch (err) {
+    console.error('Credentials update error:', err);
+    res.status(500).json({ error: 'Impossible de sauvegarder les identifiants.' });
+  }
+});
+
 // --- GET /api/settings/connect/:platform ---
-router.get('/connect/:platform', (req: Request, res: Response) => {
+router.get('/connect/:platform', async (req: Request, res: Response) => {
   const platform = req.params.platform as Platform;
   if (!platformInfo[platform]) return res.status(400).json({ error: 'Unknown platform' });
 
-  const clientId = process.env[`${platform.toUpperCase()}_CLIENT_ID`];
-  const clientSecret = process.env[`${platform.toUpperCase()}_CLIENT_SECRET`];
-  const baseUrl = process.env.BASE_URL || 'https://influenceur.digitalh.net';
+  try {
+    const user = await prisma.user.findUnique({ where: { id: DEFAULT_USER_ID } });
+    
+    // Read Client ID and Secret from DB or .env
+    const clientId = (platform === 'facebook' || platform === 'instagram')
+      ? (user?.facebookClientId || process.env.FACEBOOK_CLIENT_ID)
+      : (user?.tiktokClientId || process.env.TIKTOK_CLIENT_ID);
+      
+    const clientSecret = (platform === 'facebook' || platform === 'instagram')
+      ? (user?.facebookClientSecret || process.env.FACEBOOK_CLIENT_SECRET)
+      : (user?.tiktokClientSecret || process.env.TIKTOK_CLIENT_SECRET);
+      
+    const baseUrl = process.env.BASE_URL || 'https://influenceur.digitalh.net';
 
-  if (clientId && clientSecret) {
-    if (platform === 'facebook' || platform === 'instagram') {
-      const redirectUri = `${baseUrl}/api/settings/callback/${platform}`;
-      const oauthUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${platformInfo[platform].scope}&response_type=code`;
-      return res.redirect(oauthUrl);
+    if (clientId && clientSecret) {
+      if (platform === 'facebook' || platform === 'instagram') {
+        const redirectUri = `${baseUrl}/api/settings/callback/${platform}`;
+        const oauthUrl = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${platformInfo[platform].scope}&response_type=code`;
+        return res.redirect(oauthUrl);
+      }
+      if (platform === 'tiktok') {
+        const redirectUri = `${baseUrl}/api/settings/callback/tiktok`;
+        const oauthUrl = `https://www.tiktok.com/v2/auth/authorize?client_key=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${platformInfo[platform].scope}&response_type=code`;
+        return res.redirect(oauthUrl);
+      }
     }
-    if (platform === 'tiktok') {
-      const redirectUri = `${baseUrl}/api/settings/callback/tiktok`;
-      const oauthUrl = `https://www.tiktok.com/v2/auth/authorize?client_key=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${platformInfo[platform].scope}&response_type=code`;
-      return res.redirect(oauthUrl);
-    }
+
+    // No real keys → Sandbox mock with account form
+    res.redirect(`/api/settings/oauth-mock/${platform}`);
+  } catch (err) {
+    console.error('Connect route error:', err);
+    res.status(500).send('Internal server error');
   }
-
-  // No real keys → Sandbox mock with account form
-  res.redirect(`/api/settings/oauth-mock/${platform}`);
 });
 
 // --- GET /api/settings/oauth-mock/:platform ---

@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import prisma from '../prisma';
 
 const router = Router();
 
@@ -16,9 +17,10 @@ router.post('/', async (req: Request, res: Response) => {
     return res.status(400).json({ success: false, error: 'A prompt of at least 3 characters is required.' });
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const user = await prisma.user.findUnique({ where: { id: 'demo-user-id' } });
+  const apiKey = user?.geminiApiKey || process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return res.status(500).json({ success: false, error: 'GEMINI_API_KEY is not configured on the server.' });
+    return res.status(500).json({ success: false, error: 'Google Gemini API Key is not configured.' });
   }
 
   // Build enhanced prompt with style modifier
@@ -56,9 +58,14 @@ router.post('/', async (req: Request, res: Response) => {
     if (!response.ok) {
       const errText = await response.text();
       console.error('Imagen API error:', errText);
-
-      // Try fallback with gemini-2.0-flash if imagen-3 fails
-      return await fallbackGeneration(req, res, enhancedPrompt, apiKey, numberOfImages);
+      
+      let parsedError = 'Génération d\'image échouée.';
+      try {
+        const errJson = JSON.parse(errText);
+        parsedError = errJson.error?.message || parsedError;
+      } catch {}
+      
+      return res.status(response.status).json({ success: false, error: parsedError });
     }
 
     const data = await response.json();

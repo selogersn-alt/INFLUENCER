@@ -1,10 +1,6 @@
-import { Router, Request, Response } from 'express';
-import { GoogleGenAI } from '@google/genai';
+import prisma from '../prisma';
 
 const router = Router();
-
-// Initialisation du client Gemini avec la clé API
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
@@ -14,6 +10,18 @@ router.post('/', async (req: Request, res: Response): Promise<void> => {
       res.status(400).json({ error: 'Video prompt is required to generate text context' });
       return;
     }
+
+    // Récupérer la clé Gemini dynamique de l'utilisateur ou du .env
+    const user = await prisma.user.findUnique({ where: { id: 'demo-user-id' } });
+    const apiKey = user?.geminiApiKey || process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      res.status(500).json({ error: 'Google Gemini API Key has not been configured yet.' });
+      return;
+    }
+
+    const ai = new GoogleGenAI({ apiKey });
+
 
     console.log(`Generating text via Gemini for prompt: ${videoPrompt}`);
 

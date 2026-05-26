@@ -32,6 +32,14 @@ model User {
   tiktokConnected    Boolean  @default(false)
   tiktokToken        String?
   tiktokUsername     String?  // @username TikTok
+
+  // Clés API Custom & Crédentiels OAuth
+  geminiApiKey         String?
+  replicateToken       String?
+  facebookClientId     String?
+  facebookClientSecret String?
+  tiktokClientId       String?
+  tiktokClientSecret   String?
 }
 
 model Video {
