@@ -17,7 +17,6 @@ WORKDIR /app
 ENV NODE_ENV production
 
 # Copier uniquement les fichiers nécessaires depuis l'étape de build
-COPY --from=builder /app/next.config.js ./
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
