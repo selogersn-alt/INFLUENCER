@@ -94,7 +94,7 @@ router.post('/', upload.single('image'), async (req: Request, res: Response): Pr
 // GET: Check Generation Status
 router.get('/status/:id', async (req: Request, res: Response): Promise<void> => {
   try {
-    const predictionId = req.params.id;
+    const predictionId = req.params.id as string;
 
     // Handle mock simulations
     if (predictionId.startsWith('mock_')) {
