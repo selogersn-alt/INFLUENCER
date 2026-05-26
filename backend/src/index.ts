@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import generateRouter from './routes/generate';
 import publishRouter from './routes/publish';
 import generateTextRouter from './routes/generateText';
+import dashboardRouter from './routes/dashboard';
+import prisma from './prisma';
 
 dotenv.config();
 
@@ -18,6 +20,27 @@ app.use('/api/uploads', express.static('uploads'));
 app.use('/api/generate', generateRouter);
 app.use('/api/publish', publishRouter);
 app.use('/api/generate-text', generateTextRouter);
+app.use('/api/dashboard', dashboardRouter);
+
+// Auto-seed default user on startup
+async function seed() {
+  try {
+    const userCount = await prisma.user.count();
+    if (userCount === 0) {
+      await prisma.user.create({
+        data: {
+          id: 'demo-user-id',
+          email: 'demo@aistudio.com',
+          name: 'Demo Influencer CM'
+        }
+      });
+      console.log('Seeded default demo user.');
+    }
+  } catch (error) {
+    console.error('Database seeding failed:', error);
+  }
+}
+seed();
 
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({ status: 'ok', message: 'Backend is running' });

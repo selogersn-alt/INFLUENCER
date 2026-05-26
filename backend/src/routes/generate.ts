@@ -1,8 +1,7 @@
 import { Router, Request, Response } from 'express';
 import multer from 'multer';
 import Replicate from 'replicate';
-import fs from 'fs';
-import path from 'path';
+import prisma from '../prisma';
 
 const router = Router();
 const upload = multer({ dest: 'uploads/' });
@@ -30,17 +29,27 @@ router.post('/', upload.single('image'), async (req: Request, res: Response): Pr
     const protocol = isHttps ? 'https' : 'http';
     
     // Construct the public URL of the uploaded image
-    // Multer saves files with random hex names in 'uploads/'.
-    // We serve them publicly under '/api/uploads/'
     const imageUrl = `${protocol}://${req.get('host')}/api/uploads/${file.filename}`;
     console.log(`Uploaded image public URL: ${imageUrl}`);
 
     const replicate = getReplicateClient();
     
-    // If no Replicate token is configured, use simulated mock mode so the app remains usable
+    // If no Replicate token is configured, use simulated mock mode
     if (!replicate) {
       console.log('No REPLICATE_API_TOKEN found. Running in simulated mode.');
       const mockPredictionId = `mock_${Math.random().toString(36).substr(2, 9)}`;
+      
+      // Save simulated video in the database
+      await prisma.video.create({
+        data: {
+          id: mockPredictionId,
+          prompt: prompt,
+          imageUrl: imageUrl,
+          status: 'GENERATING',
+          userId: 'demo-user-id'
+        }
+      });
+
       res.json({
         success: true,
         predictionId: mockPredictionId,
@@ -51,7 +60,6 @@ router.post('/', upload.single('image'), async (req: Request, res: Response): Pr
     }
 
     // Map frontend model names to Replicate model handles
-    // Default to Luma Ray
     let replicateModel: any = "luma/ray";
     let input: any = {
       prompt: prompt,
@@ -79,6 +87,17 @@ router.post('/', upload.single('image'), async (req: Request, res: Response): Pr
       input: input
     });
 
+    // Save video in the database with GENERATING status
+    await prisma.video.create({
+      data: {
+        id: prediction.id,
+        prompt: prompt,
+        imageUrl: imageUrl,
+        status: 'GENERATING',
+        userId: 'demo-user-id'
+      }
+    });
+
     res.json({
       success: true,
       predictionId: prediction.id,
@@ -91,19 +110,44 @@ router.post('/', upload.single('image'), async (req: Request, res: Response): Pr
   }
 });
 
-// GET: Check Generation Status
+// GET: Check Generation Status and Update Database
 router.get('/status/:id', async (req: Request, res: Response): Promise<void> => {
   try {
     const predictionId = req.params.id as string;
 
     // Handle mock simulations
     if (predictionId.startsWith('mock_')) {
+      const finalMockUrl = "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&q=80";
+      
+      // Update database status to COMPLETED
+      await prisma.video.updateMany({
+        where: { id: predictionId, status: 'GENERATING' },
+        data: {
+          status: 'COMPLETED',
+          videoUrl: finalMockUrl
+        }
+      });
+
+      // Seed mock publishing tasks if not already done
+      const existingPosts = await prisma.post.count({ where: { videoId: predictionId } });
+      if (existingPosts === 0) {
+        const platforms = ['TIKTOK', 'INSTAGRAM', 'FACEBOOK'];
+        for (const platform of platforms) {
+          await prisma.post.create({
+            data: {
+              platform: platform,
+              status: 'PENDING_APPROVAL',
+              videoId: predictionId,
+              userId: 'demo-user-id'
+            }
+          });
+        }
+      }
+
       res.json({
         id: predictionId,
         status: 'succeeded',
-        output: [
-          "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&q=80"
-        ],
+        output: [finalMockUrl],
         message: 'Mock generation completed.'
       });
       return;
@@ -117,10 +161,46 @@ router.get('/status/:id', async (req: Request, res: Response): Promise<void> => 
 
     const prediction = await replicate.predictions.get(predictionId);
     
+    // If completed successfully, update status and generate publish queue entries
+    if (prediction.status === 'succeeded') {
+      const finalUrl = Array.isArray(prediction.output) ? prediction.output[0] : prediction.output;
+      
+      await prisma.video.update({
+        where: { id: predictionId },
+        data: {
+          status: 'COMPLETED',
+          videoUrl: finalUrl
+        }
+      });
+
+      // Create posts in queue for each social network
+      const existingPosts = await prisma.post.count({ where: { videoId: predictionId } });
+      if (existingPosts === 0) {
+        const platforms = ['TIKTOK', 'INSTAGRAM', 'FACEBOOK'];
+        for (const platform of platforms) {
+          await prisma.post.create({
+            data: {
+              platform: platform,
+              status: 'PENDING_APPROVAL',
+              videoId: predictionId,
+              userId: 'demo-user-id'
+            }
+          });
+        }
+      }
+    } else if (prediction.status === 'failed' || prediction.status === 'canceled') {
+      await prisma.video.update({
+        where: { id: predictionId },
+        data: {
+          status: 'FAILED'
+        }
+      });
+    }
+
     res.json({
       id: prediction.id,
-      status: prediction.status, // starting, processing, succeeded, failed, canceled
-      output: prediction.output, // usually an array of URLs or a single URL string
+      status: prediction.status,
+      output: prediction.output,
       error: prediction.error
     });
   } catch (error: any) {
