@@ -256,7 +256,7 @@ export default function CreateVideo() {
   const currentCaption = captions[previewPlatform] || { caption: "", hashtags: "" };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 page-enter">
+    <div className="max-w-6xl mx-auto space-y-8 page-enter pb-24 lg:pb-0">
       {/* Toast Notification */}
       {notification && (
         <div className={`fixed top-4 right-4 left-4 sm:left-auto sm:w-auto sm:min-w-80 z-[60] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border text-sm font-medium

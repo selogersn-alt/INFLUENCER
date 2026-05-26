@@ -141,7 +141,7 @@ export default function ImageGeneratePage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 page-enter">
+    <div className="max-w-6xl mx-auto space-y-6 page-enter pb-24 lg:pb-0">
       {/* Toast Notification */}
       {notification && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-3 px-5 py-3.5 bg-purple-950/90 border border-purple-500/30 text-purple-200 rounded-2xl shadow-2xl text-sm font-semibold animate-in fade-in slide-in-from-top-3 duration-300"

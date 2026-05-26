@@ -38,7 +38,7 @@ router.post('/', async (req: Request, res: Response) => {
     : prompt;
 
   try {
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`;
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`;
 
     const body = {
       instances: [{ prompt: enhancedPrompt }],
@@ -82,7 +82,7 @@ router.post('/', async (req: Request, res: Response) => {
       dataUrl: `data:${pred.mimeType || 'image/png'};base64,${pred.bytesBase64Encoded}`,
     }));
 
-    return res.json({ success: true, images, prompt: enhancedPrompt, model: 'imagen-3.0-generate-002' });
+    return res.json({ success: true, images, prompt: enhancedPrompt, model: 'imagen-3.0-generate-001' });
 
   } catch (error: unknown) {
     console.error('Image generation error:', error);
