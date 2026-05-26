@@ -24,3 +24,7 @@ Thumbs.db
 
 # Fichiers de log
 *.log
+
+# Scripts utilitaires locaux
+exec.js
+

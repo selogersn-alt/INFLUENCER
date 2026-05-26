@@ -117,7 +117,7 @@ router.get('/status/:id', async (req: Request, res: Response): Promise<void> => 
 
     // Handle mock simulations
     if (predictionId.startsWith('mock_')) {
-      const finalMockUrl = "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400&q=80";
+      const finalMockUrl = "https://assets.mixkit.co/videos/preview/mixkit-girl-in-neon-light-in-a-futuristic-city-34351-large.mp4";
       
       // Update database status to COMPLETED
       await prisma.video.updateMany({
