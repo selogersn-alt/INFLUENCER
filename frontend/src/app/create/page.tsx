@@ -1,19 +1,21 @@
 "use client";
-
+ 
 import { useState } from 'react';
 import { UploadCloud, Image as ImageIcon, Video, Play, Loader2 } from 'lucide-react';
-
+ 
 export default function CreateVideo() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [prompt, setPrompt] = useState("");
+  const [model, setModel] = useState("luma");
   const [isGenerating, setIsGenerating] = useState(false);
-
+  const [videoUrl, setVideoUrl] = useState<string | null>(null);
+ 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [hashtags, setHashtags] = useState("");
   const [isGeneratingText, setIsGeneratingText] = useState(false);
-
+ 
   const handleGenerateText = async () => {
     if (!prompt) {
       alert("Veuillez d'abord écrire un prompt vidéo pour que l'IA puisse s'en inspirer.");
@@ -22,7 +24,8 @@ export default function CreateVideo() {
     setIsGeneratingText(true);
     
     try {
-      const res = await fetch("http://localhost:3001/api/generate-text", {
+      // Use relative API path (routed through Nginx for SSL HTTPS compliance)
+      const res = await fetch("/api/generate-text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ videoPrompt: prompt })
@@ -44,25 +47,81 @@ export default function CreateVideo() {
       setIsGeneratingText(false);
     }
   };
-
+ 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
       setPreview(URL.createObjectURL(selectedFile));
+      setVideoUrl(null); // Reset generated video if image changes
     }
   };
-
+ 
   const handleGenerate = async () => {
     if (!file || !prompt) return;
     setIsGenerating(true);
-    // TODO: Connect to backend API for generation
-    setTimeout(() => {
+    setVideoUrl(null);
+ 
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('prompt', prompt);
+      formData.append('model', model);
+ 
+      // POST call to Replicate backend generate endpoint
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        body: formData
+      });
+ 
+      const responseData = await res.json();
+ 
+      if (!responseData.success || !responseData.predictionId) {
+        alert("Erreur de génération : " + (responseData.error || "Impossible de démarrer la génération"));
+        setIsGenerating(false);
+        return;
+      }
+ 
+      const predictionId = responseData.predictionId;
+      console.log(`Génération démarrée. ID de prédiction : ${predictionId}`);
+ 
+      // Asynchronous Polling Function
+      const checkStatus = async () => {
+        try {
+          const statusRes = await fetch(`/api/generate/status/${predictionId}`);
+          const statusData = await statusRes.json();
+ 
+          console.log(`Statut de la prédiction ${predictionId} :`, statusData.status);
+ 
+          if (statusData.status === 'succeeded') {
+            const finalUrl = Array.isArray(statusData.output) ? statusData.output[0] : statusData.output;
+            setVideoUrl(finalUrl);
+            setIsGenerating(false);
+            alert("Vidéo générée avec succès !");
+          } else if (statusData.status === 'failed' || statusData.status === 'canceled') {
+            alert("La génération vidéo a échoué : " + (statusData.error || "Erreur Replicate inconnue."));
+            setIsGenerating(false);
+          } else {
+            // Check status again after 4 seconds
+            setTimeout(checkStatus, 4000);
+          }
+        } catch (pollError) {
+          console.error("Erreur lors du polling :", pollError);
+          // Retry polling in case of network glitch
+          setTimeout(checkStatus, 5000);
+        }
+      };
+ 
+      // Start checking status
+      setTimeout(checkStatus, 4000);
+ 
+    } catch (error) {
+      console.error(error);
+      alert("Une erreur est survenue lors de la connexion à l'API de génération.");
       setIsGenerating(false);
-      alert("Simulation : Vidéo générée avec succès ! (Backend à connecter)");
-    }, 3000);
+    }
   };
-
+ 
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <header>
@@ -72,12 +131,22 @@ export default function CreateVideo() {
         </h2>
         <p className="text-gray-400 mt-2">Upload your influencer's photo, describe the scene, and let AI generate the video and captions.</p>
       </header>
-
+ 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Left Column: Image Upload & Video Prompt */}
         <div className="lg:col-span-7 space-y-6">
           <div className="bg-gray-900 rounded-2xl border border-gray-800 shadow-lg p-6 flex flex-col items-center justify-center relative overflow-hidden group min-h-[300px]">
-            {preview ? (
+            {videoUrl ? (
+              <div className="w-full h-full relative">
+                <video src={videoUrl} controls autoPlay className="w-full h-80 object-cover rounded-xl shadow-lg border border-purple-500/30" />
+                <button 
+                  onClick={() => { setVideoUrl(null); }}
+                  className="absolute top-2 right-2 bg-gray-900/80 px-3 py-1.5 rounded-lg hover:bg-red-500/80 transition text-white text-xs font-bold"
+                >
+                  Générer une autre
+                </button>
+              </div>
+            ) : preview ? (
               <div className="w-full h-full relative">
                 <img src={preview} alt="Reference" className="w-full h-80 object-cover rounded-xl" />
                 <button 
@@ -98,7 +167,7 @@ export default function CreateVideo() {
               </label>
             )}
           </div>
-
+ 
           <div className="bg-gray-900 rounded-2xl border border-gray-800 shadow-lg p-6">
             <label className="block text-sm font-bold text-gray-200 mb-2">Video Prompt / Action (For Kling AI)</label>
             <textarea 
@@ -111,16 +180,19 @@ export default function CreateVideo() {
             
             <div className="mt-4">
               <label className="block text-sm font-medium text-gray-300 mb-2">AI Video Model</label>
-              <select className="w-full bg-gray-950 border border-gray-800 rounded-xl p-4 text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 transition appearance-none">
-                <option value="gemini_veo">Google Veo (Gemini) - High Cinematic</option>
+              <select 
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                className="w-full bg-gray-950 border border-gray-800 rounded-xl p-4 text-gray-100 focus:outline-none focus:ring-2 focus:ring-purple-500 transition appearance-none"
+              >
+                <option value="luma">Luma Dream Machine (Dynamic)</option>
                 <option value="kling">Kling AI (Best for Lifestyle & Dance)</option>
                 <option value="runway">Runway Gen-3 (High Fidelity)</option>
-                <option value="luma">Luma Dream Machine (Dynamic)</option>
               </select>
             </div>
           </div>
         </div>
-
+ 
         {/* Right Column: Social Media Details */}
         <div className="lg:col-span-5 space-y-6">
           <div className="bg-gray-900 rounded-2xl border border-gray-800 shadow-lg p-6 space-y-4">
@@ -134,7 +206,7 @@ export default function CreateVideo() {
                 {isGeneratingText ? <Loader2 className="w-3 h-3 animate-spin" /> : "✨ Auto-Generate text"}
               </button>
             </div>
-
+ 
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1">Title (TikTok/YouTube)</label>
               <input 
@@ -144,7 +216,7 @@ export default function CreateVideo() {
                 className="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-100 focus:outline-none focus:border-blue-500"
               />
             </div>
-
+ 
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1">Caption / Description</label>
               <textarea 
@@ -154,7 +226,7 @@ export default function CreateVideo() {
                 className="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-gray-100 focus:outline-none focus:border-blue-500 resize-none"
               ></textarea>
             </div>
-
+ 
             <div>
               <label className="block text-xs font-medium text-gray-400 mb-1">Hashtags</label>
               <input 
@@ -164,7 +236,7 @@ export default function CreateVideo() {
                 className="w-full bg-gray-950 border border-gray-800 rounded-lg p-3 text-sm text-blue-400 focus:outline-none focus:border-blue-500"
               />
             </div>
-
+ 
             <button 
               onClick={handleGenerate}
               disabled={!file || !prompt || isGenerating}

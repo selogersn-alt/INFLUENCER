@@ -13,6 +13,8 @@ const port = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+app.use('/api/uploads', express.static('uploads'));
+
 app.use('/api/generate', generateRouter);
 app.use('/api/publish', publishRouter);
 app.use('/api/generate-text', generateTextRouter);
