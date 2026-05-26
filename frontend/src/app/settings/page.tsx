@@ -1,17 +1,16 @@
 "use client";
 
 import { useState } from 'react';
-import { Facebook, Instagram, Twitter, Shield, Link2, CheckCircle2 } from 'lucide-react';
+import { Shield, Link2, CheckCircle2, Users, Camera, Music } from 'lucide-react';
 
 export default function SettingsPage() {
   const [connected, setConnected] = useState({
-    instagram: true,
     facebook: false,
-    tiktok: false
+    instagram: false,
+    tiktok: false,
   });
 
   const toggleConnection = (platform: keyof typeof connected) => {
-    // In a real app, this would redirect to the OAuth provider
     setConnected(prev => ({ ...prev, [platform]: !prev[platform] }));
   };
 
@@ -19,32 +18,19 @@ export default function SettingsPage() {
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <header>
         <h2 className="text-3xl font-bold text-gray-100 flex items-center gap-3">
-          <Shield className="w-8 h-8 text-purple-400" />
+          <Link2 className="w-8 h-8 text-purple-400" />
           Settings & Integrations
         </h2>
-        <p className="text-gray-400 mt-2">Manage your AI Influencer's social media accounts and API keys.</p>
+        <p className="text-gray-400 mt-2">Connect your AI influencer's social accounts and configure API keys.</p>
       </header>
 
       <div className="bg-gray-900 rounded-2xl border border-gray-800 shadow-lg p-8">
         <h3 className="text-xl font-bold text-gray-100 mb-6 flex items-center gap-2">
-          <Link2 className="w-5 h-5 text-gray-400" />
+          <Users className="w-5 h-5 text-gray-400" />
           Social Media Accounts
         </h3>
         
         <div className="space-y-4">
-          {/* Instagram */}
-          <div className="flex items-center justify-between p-4 bg-gray-950 rounded-xl border border-gray-800">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-gradient-to-tr from-yellow-400 via-pink-500 to-purple-600 rounded-lg flex items-center justify-center">
-                <Instagram className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-200">Instagram Reels</h4>
-                <p className="text-sm text-gray-500">Publish generated videos to Instagram.</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => toggleConnection('instagram')}
           {/* Facebook */}
           <div className="flex items-center justify-between p-4 bg-gray-950 rounded-xl border border-gray-800">
             <div className="flex items-center gap-4">
