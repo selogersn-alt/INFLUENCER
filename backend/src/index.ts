@@ -5,6 +5,7 @@ import generateRouter from './routes/generate';
 import publishRouter from './routes/publish';
 import generateTextRouter from './routes/generateText';
 import dashboardRouter from './routes/dashboard';
+import settingsRouter from './routes/settings';
 import prisma from './prisma';
 
 dotenv.config();
@@ -21,6 +22,7 @@ app.use('/api/generate', generateRouter);
 app.use('/api/publish', publishRouter);
 app.use('/api/generate-text', generateTextRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/settings', settingsRouter);
 
 // Auto-seed default user on startup
 async function seed() {

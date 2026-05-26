@@ -19,6 +19,14 @@ model User {
   createdAt DateTime @default(now())
   videos    Video[]
   posts     Post[]
+
+  // Connexions Réseaux Sociaux
+  facebookConnected  Boolean  @default(false)
+  facebookToken      String?
+  instagramConnected Boolean  @default(false)
+  instagramToken     String?
+  tiktokConnected    Boolean  @default(false)
+  tiktokToken        String?
 }
 
 model Video {
