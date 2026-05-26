@@ -34,7 +34,7 @@ Description de la vidéo : ${videoPrompt}`;
       }
     });
 
-    const generatedText = response.text();
+    const generatedText = response.text;
     
     if (!generatedText) {
       throw new Error("Empty response from Gemini");
