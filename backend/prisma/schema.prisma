@@ -1,0 +1,48 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  videos    Video[]
+  posts     Post[]
+}
+
+model Video {
+  id          String   @id @default(uuid())
+  prompt      String
+  imageUrl    String
+  videoUrl    String?
+  status      String   @default("PENDING") // PENDING, GENERATING, COMPLETED, FAILED
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  posts       Post[]
+}
+
+model Post {
+  id          String   @id @default(uuid())
+  platform    String   // INSTAGRAM, FACEBOOK, TIKTOK
+  status      String   @default("PENDING_APPROVAL") // PENDING_APPROVAL, APPROVED, PUBLISHING, PUBLISHED, FAILED
+  externalId  String?  // ID on the social network
+  videoId     String
+  video       Video    @relation(fields: [videoId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
