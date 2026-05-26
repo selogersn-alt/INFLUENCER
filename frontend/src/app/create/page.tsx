@@ -233,20 +233,20 @@ export default function CreateVideo() {
   const getSimulatedAccount = () => {
     if (previewPlatform === 'tiktok') {
       return {
-        username: profile.tiktok?.connected ? `@${profile.tiktok.username}` : '@influenceuse_ia',
+        username: (profile.tiktok?.connected && profile.tiktok.username) ? `@${profile.tiktok.username}` : '@influenceuse_ia',
         pageName: 'TikTok Feed',
         avatarBg: 'bg-zinc-800'
       };
     }
     if (previewPlatform === 'instagram') {
       return {
-        username: profile.instagram?.connected ? `@${profile.instagram.username}` : '@lina_lifestyle_ai',
+        username: (profile.instagram?.connected && profile.instagram.username) ? `@${profile.instagram.username}` : '@lina_lifestyle_ai',
         pageName: 'Instagram Reels',
         avatarBg: 'bg-gradient-to-tr from-amber-500 via-pink-600 to-purple-600'
       };
     }
     return {
-      username: profile.facebook?.connected ? profile.facebook.pageName : 'Lina Lifestyle Officiel',
+      username: (profile.facebook?.connected && profile.facebook.pageName) ? profile.facebook.pageName : 'Lina Lifestyle Officiel',
       pageName: 'Facebook Page',
       avatarBg: 'bg-blue-600'
     };
