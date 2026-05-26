@@ -8,10 +8,11 @@ interface ImageGenerationRequest {
   aspectRatio?: string;
   numberOfImages?: number;
   style?: string;
+  negativePrompt?: string;
 }
 
 router.post('/', async (req: Request, res: Response) => {
-  const { prompt, aspectRatio = '1:1', numberOfImages = 1, style }: ImageGenerationRequest = req.body;
+  const { prompt, aspectRatio = '1:1', numberOfImages = 1, style, negativePrompt }: ImageGenerationRequest = req.body;
 
   if (!prompt || prompt.trim().length < 3) {
     return res.status(400).json({ success: false, error: 'A prompt of at least 3 characters is required.' });
@@ -46,6 +47,7 @@ router.post('/', async (req: Request, res: Response) => {
         aspectRatio,
         safetySetting: 'BLOCK_ONLY_HIGH',
         personGeneration: 'ALLOW_ADULT',
+        negativePrompt: negativePrompt || undefined,
       }
     };
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from 'react';
-import { ImageIcon, Sparkles, Download, Wand2, Loader2, X, ChevronRight, Copy, Check } from 'lucide-react';
+import { ImageIcon, Sparkles, Download, Wand2, Loader2, X, ChevronRight, Copy, Check, Info } from 'lucide-react';
 import Link from 'next/link';
 
 type AspectRatio = '1:1' | '9:16' | '16:9' | '4:3' | '3:4';
@@ -41,16 +41,51 @@ const QUICK_PROMPTS = [
 
 export default function ImageGeneratePage() {
   const [prompt, setPrompt] = useState('');
+  const [negativePrompt, setNegativePrompt] = useState('');
   const [style, setStyle] = useState<StyleKey>('photorealistic');
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>('1:1');
   const [count, setCount] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isOptimizingPrompt, setIsOptimizingPrompt] = useState(false);
   const [images, setImages] = useState<GeneratedImage[]>([]);
   const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [modelUsed, setModelUsed] = useState('');
   const [copied, setCopied] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [notification, setNotification] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setNotification(msg);
+    setTimeout(() => setNotification(null), 4000);
+  };
+
+  // Magic Wand Prompt Enhancer
+  const handleOptimizePrompt = async () => {
+    if (!prompt.trim() || prompt.length < 3) {
+      showToast("Veuillez d'abord écrire un prompt d'au moins 3 caractères.");
+      return;
+    }
+    setIsOptimizingPrompt(true);
+    try {
+      const res = await fetch('/api/generate-text/optimize-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, type: 'image' })
+      });
+      const data = await res.json();
+      if (data.success && data.optimizedPrompt) {
+        setPrompt(data.optimizedPrompt);
+        showToast("Prompt optimisé pour Imagen 3 ! ✨");
+      } else {
+        showToast(data.error || "L'optimisation a échoué.");
+      }
+    } catch {
+      showToast("Erreur de connexion.");
+    } finally {
+      setIsOptimizingPrompt(false);
+    }
+  };
 
   const handleGenerate = async () => {
     if (!prompt.trim() || isGenerating) return;
@@ -64,6 +99,7 @@ export default function ImageGeneratePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           prompt: prompt.trim(),
+          negativePrompt: negativePrompt.trim() || undefined,
           style: style === 'none' ? undefined : style,
           aspectRatio,
           numberOfImages: count,
@@ -104,10 +140,17 @@ export default function ImageGeneratePage() {
     textareaRef.current?.focus();
   };
 
-  const aspectClass = ASPECT_RATIOS.find(a => a.value === aspectRatio)?.css || 'aspect-square';
-
   return (
     <div className="max-w-6xl mx-auto space-y-6 page-enter">
+      {/* Toast Notification */}
+      {notification && (
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-3 px-5 py-3.5 bg-purple-950/90 border border-purple-500/30 text-purple-200 rounded-2xl shadow-2xl text-sm font-semibold animate-in fade-in slide-in-from-top-3 duration-300"
+          style={{ backdropFilter: 'blur(20px)' }}>
+          <Sparkles className="w-4 h-4 text-purple-400" />
+          {notification}
+        </div>
+      )}
+
       {/* Header */}
       <header>
         <h2 className="text-2xl sm:text-3xl font-bold text-white flex items-center gap-3">
@@ -118,7 +161,7 @@ export default function ImageGeneratePage() {
           Génération d&apos;Image IA
         </h2>
         <p className="text-gray-400 mt-1.5 text-sm sm:text-base">
-          Powered by <span className="text-purple-400 font-semibold">Google Imagen 3</span> via Gemini API
+          Propulsé par <span className="text-purple-400 font-semibold">Google Imagen 3</span> avec optimisations en temps réel.
         </p>
       </header>
 
@@ -129,15 +172,28 @@ export default function ImageGeneratePage() {
           <div className="rounded-2xl p-5 space-y-3" style={{ background: 'rgba(17,17,27,0.8)', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div className="flex items-center justify-between">
               <label className="text-sm font-semibold text-gray-200">Décris ton image</label>
-              <button
-                onClick={handleCopyPrompt}
-                disabled={!prompt}
-                className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition disabled:opacity-0"
-              >
-                {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-                {copied ? 'Copié' : 'Copier'}
-              </button>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={handleOptimizePrompt}
+                  disabled={isOptimizingPrompt || !prompt}
+                  className="flex items-center gap-1 text-xs text-purple-400 hover:text-purple-300 font-semibold transition disabled:opacity-30"
+                >
+                  {isOptimizingPrompt ? <Loader2 className="w-3 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  Optimiser (Gemini)
+                </button>
+
+                <button
+                  onClick={handleCopyPrompt}
+                  disabled={!prompt}
+                  className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 transition disabled:opacity-0"
+                >
+                  {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                  {copied ? 'Copié' : 'Copier'}
+                </button>
+              </div>
             </div>
+            
             <textarea
               ref={textareaRef}
               rows={4}
@@ -147,6 +203,18 @@ export default function ImageGeneratePage() {
               className="input-field resize-none text-sm"
               onKeyDown={e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleGenerate(); }}
             />
+
+            {/* Negative Prompt */}
+            <div className="space-y-1.5 pt-1">
+              <label className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider block">Prompt Négatif (À exclure)</label>
+              <input
+                type="text"
+                placeholder="Ex: flou, déformation, texte, mauvaise qualité..."
+                value={negativePrompt}
+                onChange={e => setNegativePrompt(e.target.value)}
+                className="input-field text-xs font-mono"
+              />
+            </div>
             <p className="text-xs text-gray-600">Ctrl+Entrée pour générer</p>
           </div>
 
@@ -261,7 +329,7 @@ export default function ImageGeneratePage() {
                   <div className="absolute -inset-2 rounded-3xl pulse-glow" />
                 </div>
                 <p className="text-gray-300 font-medium">Imagen 3 génère votre image…</p>
-                <p className="text-gray-500 text-sm max-w-xs">Cela prend généralement 5 à 15 secondes selon la complexité du prompt.</p>
+                <p className="text-gray-500 text-sm max-w-xs">Génération via Gemini API. Cela prend généralement 5 à 10 secondes.</p>
                 <div className="w-48 h-1 rounded-full overflow-hidden bg-gray-800">
                   <div className="h-full shimmer" style={{ background: 'linear-gradient(90deg, #6366f1, #a855f7, #ec4899)' }} />
                 </div>
@@ -272,8 +340,15 @@ export default function ImageGeneratePage() {
                   <X className="w-6 h-6 text-red-400" />
                 </div>
                 <p className="text-red-400 font-medium">Génération échouée</p>
-                <p className="text-gray-500 text-sm max-w-sm">{error}</p>
-                <button onClick={() => setError(null)} className="btn-secondary text-sm mt-2">Réessayer</button>
+                <div className="flex items-start gap-2 max-w-sm p-3 bg-red-950/20 border border-red-500/20 rounded-xl text-left">
+                  <Info className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-gray-400 text-xs leading-normal">{error}</p>
+                </div>
+                
+                <p className="text-[11px] text-gray-500 max-w-xs mt-2">
+                  Si le message indique que votre clé a été bloquée pour fuite (Leaked Key), rendez-vous dans les <strong>Paramètres</strong> pour enregistrer une nouvelle clé API Gemini privée.
+                </p>
+                <button onClick={handleGenerate} className="btn-secondary text-sm mt-3 px-6 py-2.5">Réessayer</button>
               </div>
             ) : selectedImage ? (
               <div className="relative w-full">
@@ -286,23 +361,22 @@ export default function ImageGeneratePage() {
                 {modelUsed && (
                   <div className="absolute top-3 left-3">
                     <span className="badge badge-info text-xs">
-                      <Sparkles className="w-3 h-3" /> {modelUsed}
+                      <Sparkles className="w-3 h-3 animate-pulse" /> {modelUsed}
                     </span>
                   </div>
                 )}
                 <div className="absolute top-3 right-3 flex gap-2">
                   <button
                     onClick={() => handleDownload(selectedImage, images.indexOf(selectedImage))}
-                    className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-                    style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)' }}
+                    className="w-9 h-9 rounded-xl flex items-center justify-center transition-all bg-black/60 hover:bg-black/80 border border-white/10"
                     title="Télécharger"
                   >
                     <Download className="w-4 h-4 text-white" />
                   </button>
                   <Link
                     href={`/create?imageData=${encodeURIComponent(selectedImage.dataUrl)}`}
-                    className="flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold text-white transition-all"
-                    style={{ background: 'linear-gradient(135deg, #a855f7, #ec4899)', backdropFilter: 'blur(10px)' }}
+                    className="flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-semibold text-white transition-all hover:opacity-90 active:scale-95"
+                    style={{ background: 'linear-gradient(135deg, #a855f7, #ec4899)', border: '1px solid rgba(255,255,255,0.1)' }}
                   >
                     Créer vidéo →
                   </Link>
@@ -310,7 +384,7 @@ export default function ImageGeneratePage() {
               </div>
             ) : (
               <div className="flex flex-col items-center gap-4 py-16 px-8 text-center">
-                <div className="w-16 h-16 rounded-2xl bg-white/3 flex items-center justify-center">
+                <div className="w-16 h-16 rounded-2xl bg-white/3 flex items-center justify-center border border-white/5">
                   <ImageIcon className="w-8 h-8 text-gray-600" />
                 </div>
                 <p className="text-gray-500 text-sm">Vos images générées apparaîtront ici</p>
