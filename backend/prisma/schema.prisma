@@ -23,10 +23,15 @@ model User {
   // Connexions Réseaux Sociaux
   facebookConnected  Boolean  @default(false)
   facebookToken      String?
+  facebookPageId     String?  // ID de la page Facebook ciblée
+  facebookPageName   String?  // Nom affiché de la page
   instagramConnected Boolean  @default(false)
   instagramToken     String?
+  instagramAccountId String?  // ID du compte Business Instagram
+  instagramUsername  String?  // @username affiché
   tiktokConnected    Boolean  @default(false)
   tiktokToken        String?
+  tiktokUsername     String?  // @username TikTok
 }
 
 model Video {
