@@ -13,7 +13,7 @@ async function deploy() {
 
     const commands = [
       'cd /opt && if [ -d "INFLUENCER" ]; then cd INFLUENCER && git pull; else git clone https://github.com/selogersn-alt/INFLUENCER.git && cd INFLUENCER; fi',
-      'cd /opt/INFLUENCER && mkdir -p backend && echo "GEMINI_API_KEY=AIzaSyAMOYVojUoeH7ppgcBRKGUvuN0LMrxWu1w" > backend/.env',
+      'cd /opt/INFLUENCER && mkdir -p backend && echo "GEMINI_API_KEY=AIzaSyDKDR6fbvkX9J3m4U9ur9R7t5sXG2H2nTA" > backend/.env',
       'cd /opt/INFLUENCER && docker compose up -d --build'
     ];
 
