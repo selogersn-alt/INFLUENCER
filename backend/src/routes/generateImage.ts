@@ -55,7 +55,7 @@ router.post('/', async (req: Request, res: Response) => {
         numberOfImages: Math.min(numberOfImages, 4),
         aspectRatio: finalAspectRatio as any,
         negativePrompt: negativePrompt || undefined,
-        personGeneration: 'ALLOW_ADULT',
+        personGeneration: 'ALLOW_ADULT' as any,
       }
     });
 
