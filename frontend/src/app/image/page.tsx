@@ -141,7 +141,7 @@ export default function ImageGeneratePage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 page-enter pb-24 lg:pb-0">
+    <div className="max-w-6xl mx-auto space-y-6 page-enter pb-32 lg:pb-0">
       {/* Toast Notification */}
       {notification && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-3 px-5 py-3.5 bg-purple-950/90 border border-purple-500/30 text-purple-200 rounded-2xl shadow-2xl text-sm font-semibold animate-in fade-in slide-in-from-top-3 duration-300"
@@ -219,17 +219,16 @@ export default function ImageGeneratePage() {
           </div>
 
           {/* Quick prompts */}
-          <div className="rounded-2xl p-4 space-y-2" style={{ background: 'rgba(17,17,27,0.8)', border: '1px solid rgba(255,255,255,0.06)' }}>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Inspirations rapides</p>
-            <div className="space-y-1.5">
+          <div className="rounded-2xl p-4 space-y-2.5" style={{ background: 'rgba(17,17,27,0.8)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Inspirations rapides</p>
+            <div className="flex flex-wrap gap-1.5 pt-1">
               {QUICK_PROMPTS.map((qp, i) => (
                 <button
                   key={i}
                   onClick={() => handleQuickPrompt(qp)}
-                  className="w-full text-left text-xs text-gray-400 hover:text-gray-200 py-2 px-3 rounded-lg hover:bg-white/5 transition flex items-start gap-2 group"
+                  className="text-[11px] bg-white/3 hover:bg-purple-500/10 hover:text-purple-300 border border-white/5 hover:border-purple-500/30 px-3 py-1.5 rounded-xl transition-all duration-200 text-gray-400 active:scale-[0.97]"
                 >
-                  <ChevronRight className="w-3 h-3 flex-shrink-0 mt-0.5 text-purple-500 group-hover:translate-x-0.5 transition-transform" />
-                  <span className="line-clamp-1">{qp}</span>
+                  {qp.split(',')[0]}
                 </button>
               ))}
             </div>
@@ -254,6 +253,10 @@ export default function ImageGeneratePage() {
                 </button>
               ))}
             </div>
+            
+            <p className="text-[10px] text-gray-500 mt-3 text-center italic leading-relaxed border-t border-white/5 pt-2">
+              ℹ️ Style {STYLES.find(s => s.value === style)?.label} : {STYLES.find(s => s.value === style)?.desc}
+            </p>
           </div>
 
           {/* Format & Count */}
