@@ -49,7 +49,7 @@ router.post('/', async (req: Request, res: Response) => {
     const finalAspectRatio = allowedRatios.includes(aspectRatio) ? aspectRatio : '1:1';
 
     const responseSDK = await ai.models.generateImages({
-      model: 'imagen-3.0-generate-001',
+      model: 'imagen-4.0-generate-001',
       prompt: enhancedPrompt,
       config: {
         numberOfImages: Math.min(numberOfImages, 4),
@@ -77,7 +77,7 @@ router.post('/', async (req: Request, res: Response) => {
       success: true, 
       images, 
       prompt: enhancedPrompt, 
-      model: 'imagen-3.0-generate-001' 
+      model: 'imagen-4.0-generate-001' 
     });
 
   } catch (error: any) {
