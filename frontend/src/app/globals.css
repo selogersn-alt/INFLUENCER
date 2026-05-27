@@ -154,6 +154,11 @@ body {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
 }
+@media (min-width: 1024px) {
+  .bottom-nav {
+    display: none !important;
+  }
+}
 .bottom-nav-item {
   display: flex;
   flex-direction: column;
